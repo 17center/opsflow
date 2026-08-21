@@ -1,0 +1,12 @@
+# 开发环境配置
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:opsflow}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${DB_USER:opsflow}
+    password: ${DB_PASSWORD:Opsflow@123}
+    hikari:
+      pool-name: opsflow-hikari
+      minimum-idle: 5
+      maximum-pool-size: 20
+      connection-timeout: 30000

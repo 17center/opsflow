@@ -1,0 +1,73 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: opsflow-backend
+  profiles:
+    active: dev
+  # 时间格式
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 50MB
+  # RabbitMQ
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: 5672
+    username: ${RABBITMQ_USER:opsflow}
+    password: ${RABBITMQ_PASS:opsflow@123}
+    virtual-host: /opsflow
+  # Redis
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+      database: 0
+      timeout: 5000ms
+
+# MyBatis-Plus
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  type-aliases-package: com.opsflow.module.**.model.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+      id-type: auto
+
+# Knife4j 接口文档: http://localhost:8080/doc.html
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+# Camunda 工作流引擎
+camunda:
+  bpm:
+    admin-user:
+      id: admin
+      password: admin
+      first-name: Admin
+    filter:
+      create: All tasks
+
+opsflow:
+  jwt:
+    # HMAC 密钥 (生产环境务必通过环境变量注入)
+    secret: ${OPSFLOW_JWT_SECRET:opsflow-dev-secret-key-change-me-in-production-0123456789}
+    expiration: 86400
+  minio:
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    access-key: ${MINIO_ACCESS_KEY:opsflow}
+    secret-key: ${MINIO_SECRET_KEY:opsflow@123456}
+    bucket: opsflow

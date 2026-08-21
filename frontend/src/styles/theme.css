@@ -1,0 +1,191 @@
+/* ============================================================
+   OpsFlow 主题系统
+   亮色 / 暗色 双主题 + 可换品牌强调色 + 侧边栏风格
+   品牌色由 theme store 动态写入 :root，此处仅定义结构与兜底默认值
+   ============================================================ */
+
+/* ---------- 兜底默认品牌色（JS 应用前使用） ---------- */
+:root {
+  --brand: #409eff;
+  --brand-light-3: #79bbff;
+  --brand-light-5: #a0cfff;
+  --brand-light-7: #c6e2ff;
+  --brand-light-8: #d9ecff;
+  --brand-light-9: #ecf5ff;
+  --brand-dark-2: #337ecc;
+}
+
+/* ---------- 亮色主题 ---------- */
+:root,
+[data-theme='light'] {
+  --bg-page: #eef1f6;
+  --bg-card: #ffffff;
+  --bg-header: rgba(255, 255, 255, 0.82);
+  --text-primary: #1f2329;
+  --text-regular: #4c5563;
+  --text-secondary: #8a93a3;
+  --border-color: #e6e9f0;
+  --shadow-card: 0 1px 2px rgba(24, 39, 75, 0.04), 0 4px 16px rgba(24, 39, 75, 0.06);
+  --shadow-pop: 0 8px 28px rgba(24, 39, 75, 0.14);
+  --grid-line: rgba(24, 39, 75, 0.04);
+}
+
+/* ---------- 暗色主题 ---------- */
+[data-theme='dark'] {
+  --bg-page: #0d1320;
+  --bg-card: #151d2e;
+  --bg-card-2: #1a2336;
+  --bg-header: rgba(13, 19, 32, 0.78);
+  --text-primary: #e7ecf3;
+  --text-regular: #aebad0;
+  --text-secondary: #6f7c94;
+  --border-color: #22304a;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 24px rgba(0, 0, 0, 0.35);
+  --shadow-pop: 0 10px 34px rgba(0, 0, 0, 0.55);
+  --grid-line: rgba(120, 140, 180, 0.05);
+}
+
+/* ---------- 侧边栏风格 ---------- */
+[data-sidebar='dark'] {
+  --sidebar-bg: #0b101c;
+  --sidebar-bg-start: #0b101c;
+  --sidebar-bg-end: #0b101c;
+  --sidebar-text: rgba(231, 236, 243, 0.62);
+  --sidebar-text-active: #ffffff;
+  --sidebar-hover: rgba(255, 255, 255, 0.06);
+  --sidebar-active-bg: var(--brand);
+}
+
+[data-sidebar='light'] {
+  --sidebar-bg: #f7f9fc;
+  --sidebar-bg-start: #f7f9fc;
+  --sidebar-bg-end: #eef1f6;
+  --sidebar-text: #4c5563;
+  --sidebar-text-active: var(--brand);
+  --sidebar-hover: rgba(24, 39, 75, 0.06);
+  --sidebar-active-bg: color-mix(in srgb, var(--brand) 12%, transparent);
+}
+
+[data-sidebar='gradient'] {
+  --sidebar-bg: linear-gradient(168deg, #0d1526 0%, #0b101c 55%, #0e1a2e 100%);
+  --sidebar-bg-start: #0d1526;
+  --sidebar-bg-end: #0e1a2e;
+  --sidebar-text: rgba(231, 236, 243, 0.62);
+  --sidebar-text-active: #ffffff;
+  --sidebar-hover: rgba(255, 255, 255, 0.06);
+  --sidebar-active-bg: var(--brand);
+}
+
+/* ---------- Element Plus 变量覆盖（亮色） ---------- */
+:root {
+  --el-color-primary: var(--brand);
+  --el-color-primary-light-3: var(--brand-light-3);
+  --el-color-primary-light-5: var(--brand-light-5);
+  --el-color-primary-light-7: var(--brand-light-7);
+  --el-color-primary-light-8: var(--brand-light-8);
+  --el-color-primary-light-9: var(--brand-light-9);
+  --el-color-primary-dark-2: var(--brand-dark-2);
+  --el-bg-color-page: var(--bg-page);
+  --el-bg-color: var(--bg-card);
+  --el-bg-color-overlay: var(--bg-card);
+  --el-border-color: var(--border-color);
+  --el-border-color-light: var(--border-color);
+  --el-border-color-lighter: var(--border-color);
+  --el-text-color-primary: var(--text-primary);
+  --el-text-color-regular: var(--text-regular);
+  --el-text-color-secondary: var(--text-secondary);
+  --el-border-radius-base: 8px;
+  --el-border-radius-small: 6px;
+}
+
+/* ---------- Element Plus 变量覆盖（暗色） ---------- */
+[data-theme='dark'] {
+  --el-bg-color-page: var(--bg-page);
+  --el-bg-color: var(--bg-card);
+  --el-bg-color-overlay: var(--bg-card-2);
+  --el-border-color: var(--border-color);
+  --el-border-color-light: var(--border-color);
+  --el-border-color-lighter: var(--border-color);
+  --el-text-color-primary: var(--text-primary);
+  --el-text-color-regular: var(--text-regular);
+  --el-text-color-secondary: var(--text-secondary);
+  --el-fill-color-blank: var(--bg-card);
+  --el-fill-color-light: var(--bg-card-2);
+  --el-fill-color-lighter: var(--bg-card-2);
+  --el-mask-color: rgba(0, 0, 0, 0.6);
+}
+
+/* ---------- 全局基础 ---------- */
+html,
+body,
+#app {
+  height: 100%;
+  font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', sans-serif;
+  font-size: 14px;
+  color: var(--text-primary);
+  background-color: var(--bg-page);
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* 等宽数字字体（用于数据/监控场景的细节） */
+.mono {
+  font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 滚动条 ---------- */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-secondary) 30%, transparent);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--text-secondary) 50%, transparent);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---------- 卡片视觉精修 ---------- */
+.el-card {
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-card);
+  background: var(--bg-card);
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+.el-card.is-hover-shadow:hover {
+  box-shadow: var(--shadow-pop);
+  transform: translateY(-2px);
+}
+.el-card__header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  font-weight: 600;
+}
+
+/* ---------- 页面过渡 ---------- */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: opacity 0.28s ease, transform 0.28s ease;
+}
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+/* ---------- 表格表头微调 ---------- */
+.el-table {
+  --el-table-header-bg-color: color-mix(in srgb, var(--bg-card) 60%, var(--bg-page));
+  --el-table-tr-bg-color: var(--bg-card);
+  --el-table-border-color: var(--border-color);
+}

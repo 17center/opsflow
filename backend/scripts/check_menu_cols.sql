@@ -1,0 +1,1 @@
+SHOW COLUMNS FROM sys_menu;
