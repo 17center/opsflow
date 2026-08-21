@@ -11,6 +11,8 @@ jobs:
     env:
       GITEA_HOST: http://127.0.0.1:3000
       REPO: opsflow-admin/opsflow
+      HEALTH_USER: admin
+      HEALTH_PASS: admin123
     steps:
       - name: Checkout
         run: |
@@ -49,7 +51,7 @@ jobs:
             code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 \
               -X POST http://127.0.0.1/api/auth/login \
               -H 'Content-Type: application/json' \
-              -d '{"username":"admin","password":"admin123"}')
+              -d "{\"username\":\"${HEALTH_USER}\",\"password\":\"${HEALTH_PASS}\"}")
             if [ "$code" = "200" ]; then ok=1; echo "login OK after ${i} checks"; break; fi
             sleep 5
           done

@@ -1,1 +1,0 @@
-SELECT id, menu_name, permission, menu_type FROM sys_menu ORDER BY id LIMIT 80;

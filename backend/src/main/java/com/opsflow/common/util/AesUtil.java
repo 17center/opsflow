@@ -15,8 +15,9 @@ import java.util.Base64;
  * 每个密文前都会附带一个 12 字节的随机 IV，格式为：Base64(iv + tag + cipherText)。
  * </p>
  * <p>
- * 为兼容历史 ECB 密文，解密失败时会回退到旧的 ECB 模式再尝试一次；
- * 新写入的数据全部使用 GCM 模式。
+ * 为兼容历史 ECB 密文，可选择性设置环境变量 {@code OPSFLOW_AES_LEGACY_KEY}，
+ * 解密失败时会回退到旧的 ECB 模式再尝试一次；新写入的数据全部使用 GCM 模式。
+ * 若未设置 LEGACY_KEY，则仅支持 GCM 模式。
  * </p>
  */
 public final class AesUtil {
@@ -29,8 +30,8 @@ public final class AesUtil {
 
     /** 从环境变量读取密钥并派生 32 字节 AES 密钥 */
     private static final byte[] KEY = deriveKey();
-    /** 旧 ECB 模式的硬编码密钥，仅用于兼容历史数据 */
-    private static final byte[] LEGACY_KEY = "OpsFlow-Aes-Key-2026-Secure-K3YS".getBytes(StandardCharsets.UTF_8);
+    /** 旧 ECB 模式的兼容密钥，通过环境变量 OPSFLOW_AES_LEGACY_KEY 注入，未设置则为 null */
+    private static final byte[] LEGACY_KEY = deriveLegacyKey();
 
     private AesUtil() {
     }
@@ -47,6 +48,14 @@ public final class AesUtil {
         } catch (Exception e) {
             throw new IllegalStateException("初始化 AES 密钥失败", e);
         }
+    }
+
+    private static byte[] deriveLegacyKey() {
+        String envKey = System.getenv("OPSFLOW_AES_LEGACY_KEY");
+        if (envKey == null || envKey.isBlank()) {
+            return null;
+        }
+        return envKey.getBytes(StandardCharsets.UTF_8);
     }
 
     /** GCM 加密为 Base64 字符串 */
@@ -74,7 +83,7 @@ public final class AesUtil {
 
     /**
      * 解密 Base64 密文。
-     * 先尝试 GCM 模式；失败时回退到旧 ECB 模式，兼容历史数据。
+     * 先尝试 GCM 模式；若配置了 LEGACY_KEY 且 GCM 失败时回退到旧 ECB 模式，兼容历史数据。
      */
     public static String decrypt(String cipherText) {
         if (cipherText == null) {
@@ -83,11 +92,14 @@ public final class AesUtil {
         try {
             return decryptGcm(cipherText);
         } catch (Exception e) {
-            try {
-                return decryptEcb(cipherText);
-            } catch (Exception legacyEx) {
-                throw new IllegalStateException("AES 解密失败", legacyEx);
+            if (LEGACY_KEY != null) {
+                try {
+                    return decryptEcb(cipherText);
+                } catch (Exception legacyEx) {
+                    throw new IllegalStateException("AES 解密失败（GCM + ECB 回退均失败）", legacyEx);
+                }
             }
+            throw new IllegalStateException("AES 解密失败（GCM 模式）", e);
         }
     }
 

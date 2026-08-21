@@ -1,1 +1,0 @@
-SELECT id, menu_name, permission, path FROM sys_menu WHERE permission LIKE 'cmdb:%' OR path LIKE 'cmdb%';

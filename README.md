@@ -67,6 +67,8 @@ mvn spring-boot:run
 
 默认管理员账号：`admin` / `admin123`
 
+> ⚠️ **生产部署第一件事就是修改默认管理员密码！**
+
 ### 前端启动
 
 ```bash
@@ -116,11 +118,16 @@ opsflow/
 
 ## 安全说明
 
-- 所有生产环境凭据通过环境变量注入，不入库
-- 配置文件中的默认值仅为开发环境占位，**生产部署必须替换**
-- 数据库端口、中间件端口建议绑定 `127.0.0.1`，仅通过 Nginx 反向代理对外暴露
-- 建议定期备份 MySQL，启用磁盘快照
+- **凭据注入**：所有生产环境凭据通过环境变量注入，不硬编码在代码中
+  - `OPSFLOW_AES_KEY`：AES-256 主密钥（GCM 模式），**生产必须设置强随机密钥**
+  - `OPSFLOW_AES_LEGACY_KEY`：可选，兼容历史 ECB 密文的旧密钥，迁移完成后建议移除
+  - `OPSFLOW_JWT_SECRET`：JWT 签名密钥
+  - `DB_PASSWORD` / `RABBITMQ_PASS` / `REDIS_PASSWORD` / `MINIO_SECRET_KEY`：中间件凭据
+- **默认密码**：配置文件和初始数据中的默认值（`admin/admin123`、`opsflow@123` 等）仅为开发环境占位，**生产部署必须全部替换**
+- **数据库**：MySQL / Redis / RabbitMQ / MinIO 端口建议绑定 `127.0.0.1`，仅通过 Nginx 反向代理对外暴露 80/443
+- **备份**：建议定期备份 MySQL，启用磁盘快照
+- **审计**：操作日志自动脱敏敏感字段（password 等），但数据库层仍以密文存储主机凭据
 
 ## License
 
-私有项目，未经授权不得用于商业用途。
+MIT License

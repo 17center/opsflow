@@ -1,1 +1,0 @@
-SELECT id, name, permission FROM sys_menu WHERE permission LIKE 'cmdb:%';
