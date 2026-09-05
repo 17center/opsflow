@@ -41,12 +41,17 @@
         <el-table-column prop="remark" label="备注" min-width="140" show-overflow-tooltip />
         <el-table-column label="操作" width="230" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
-            <el-button link type="success" @click="openAuthDialog(row)">分配权限</el-button>
-            <el-button link :type="row.status === 1 ? 'danger' : 'success'" @click="handleStatus(row)">
-              {{ row.status === 1 ? '停用' : '启用' }}
-            </el-button>
-            <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
+            <template v-if="isAdminRole(row)">
+              <el-tag type="warning" effect="plain">内置角色 · 锁定</el-tag>
+            </template>
+            <template v-else>
+              <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
+              <el-button link type="success" @click="openAuthDialog(row)">分配权限</el-button>
+              <el-button link :type="row.status === 1 ? 'danger' : 'success'" @click="handleStatus(row)">
+                {{ row.status === 1 ? '停用' : '启用' }}
+              </el-button>
+              <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
+            </template>
           </template>
         </el-table-column>
       </el-table>
@@ -158,6 +163,11 @@ const rules: FormRules = {
 function dataScopeText(scope?: number) {
   const map: Record<number, string> = { 1: '全部数据', 2: '本部门', 3: '本部门及以下', 4: '仅本人' }
   return scope ? map[scope] || '-' : '-'
+}
+
+/** 判断是否为内置超级管理员角色（强制锁定，不可编辑/分配权限/停用/删除） */
+function isAdminRole(row: RoleItem) {
+  return row.roleCode === 'ROLE_ADMIN'
 }
 
 async function load() {

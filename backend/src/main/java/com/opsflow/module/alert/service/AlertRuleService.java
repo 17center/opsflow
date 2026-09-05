@@ -103,8 +103,8 @@ public class AlertRuleService {
         rule.setThreshold(dto.getThreshold());
         rule.setDurationSeconds(dto.getDurationSeconds() == null ? 60 : dto.getDurationSeconds());
         rule.setAlertLevel(dto.getAlertLevel());
-        rule.setNotifyChannels(dto.getNotifyChannels());
-        rule.setNotifyUsers(dto.getNotifyUsers());
+        rule.setNotifyChannels(StringUtils.hasText(dto.getNotifyChannels()) ? dto.getNotifyChannels() : "");
+        rule.setNotifyUsers(StringUtils.hasText(dto.getNotifyUsers()) ? dto.getNotifyUsers() : "");
         rule.setRemark(dto.getRemark());
     }
 
@@ -152,5 +152,11 @@ public class AlertRuleService {
     /** 供事件触发使用的规则查询 */
     public AlertRule getById(Long id) {
         return ruleMapper.selectById(id);
+    }
+
+    /** 供指标采集器使用的启用规则列表 */
+    public List<AlertRule> listEnabled() {
+        return ruleMapper.selectList(
+                Wrappers.<AlertRule>lambdaQuery().eq(AlertRule::getStatus, 1));
     }
 }

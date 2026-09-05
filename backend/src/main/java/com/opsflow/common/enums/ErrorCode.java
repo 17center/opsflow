@@ -34,7 +34,7 @@ public enum ErrorCode {
     ROLE_CODE_EXISTS(40020, "角色编码已存在"),
     ROLE_HAS_USERS(40021, "角色下存在关联用户"),
     ROLE_NOT_FOUND(40022, "角色不存在"),
-    ROLE_ADMIN_PROTECTED(40023, "内置管理员角色不可删除/停用"),
+    ROLE_ADMIN_PROTECTED(40023, "内置超级管理员角色受保护，不可删除/停用/修改/分配权限"),
 
     // ===== 菜单模块 (4003x) =====
     MENU_HAS_CHILDREN(40030, "菜单下存在子菜单"),
@@ -78,6 +78,7 @@ public enum ErrorCode {
     HOST_NOT_FOUND(40076, "目标主机不存在"),
     EXEC_NOT_FOUND(40077, "执行记录不存在"),
     HOST_CRED_INVALID(40078, "目标主机认证配置无效"),
+    HOST_EXISTS(40079, "该IP和SSH端口已存在，请勿重复添加"),
 
     // ===== 告警模块 (4008x) =====
     ALERT_RULE_EXISTS(40080, "告警规则已存在(同指标同主机)"),

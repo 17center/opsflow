@@ -16,6 +16,9 @@ frontend/*.local
 *.swp
 .DS_Store
 
+# ---- TRAE 本地工具 ----
+.trae/
+
 # ---- 日志与环境 ----
 *.log
 logs/

@@ -13,14 +13,19 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 public class ExecutionWebSocketConfig implements WebSocketConfigurer {
 
     private final ExecutionWebSocketHandler executionWebSocketHandler;
+    private final TerminalWebSocketHandler terminalWebSocketHandler;
 
-    public ExecutionWebSocketConfig(ExecutionWebSocketHandler executionWebSocketHandler) {
+    public ExecutionWebSocketConfig(ExecutionWebSocketHandler executionWebSocketHandler,
+                                     TerminalWebSocketHandler terminalWebSocketHandler) {
         this.executionWebSocketHandler = executionWebSocketHandler;
+        this.terminalWebSocketHandler = terminalWebSocketHandler;
     }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(executionWebSocketHandler, "/ws/exec")
+                .setAllowedOrigins("*");
+        registry.addHandler(terminalWebSocketHandler, "/ws/terminal")
                 .setAllowedOrigins("*");
     }
 }

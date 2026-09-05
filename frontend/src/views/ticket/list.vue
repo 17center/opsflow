@@ -132,15 +132,16 @@
         </div>
 
         <!-- 附件 -->
-        <el-divider content-position="left">附件（{{ detail.attachments?.length || 0 }}）</el-divider>
+        <el-divider content-position="left">附件（{{ attachments.length }}）</el-divider>
         <div class="attachment-list">
-          <div v-for="a in detail.attachments" :key="a.id" class="attachment-item">
+          <div v-for="a in attachments" :key="a.id" class="attachment-item">
             <el-icon><Paperclip /></el-icon>
             <span class="name">{{ a.fileName }}</span>
             <span class="size">{{ formatSize(a.fileSize) }}</span>
+            <span class="size">{{ a.uploadTime }}</span>
             <el-button link type="primary" size="small" @click="download(a)">下载</el-button>
           </div>
-          <el-empty v-if="!detail.attachments?.length" description="暂无附件" :image-size="60" />
+          <el-empty v-if="!attachments.length" description="暂无附件" :image-size="60" />
         </div>
         <el-upload :show-file-list="false" :before-upload="(f: File) => handleUpload(f)">
           <el-button size="small" :icon="Upload">上传附件</el-button>
@@ -194,6 +195,7 @@ import {
   reopenTicket,
   addComment,
   uploadAttachment,
+  listAttachments,
   pageUsers,
   STATUS_TEXT,
   STATUS_TAG,
@@ -223,6 +225,7 @@ const query = reactive<{
 // 详情抽屉
 const drawerVisible = ref(false)
 const detail = ref<TicketDetail | null>(null)
+const attachments = ref<AttachmentItem[]>([])
 const commentText = ref('')
 const commenting = ref(false)
 
@@ -316,6 +319,7 @@ function handleSizeChange(size: number) {
 async function openDetail(id: number) {
   drawerVisible.value = true
   detail.value = await getTicket(id)
+  attachments.value = await listAttachments(id)
   commentText.value = ''
 }
 

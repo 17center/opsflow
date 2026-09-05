@@ -1,5 +1,6 @@
 package com.opsflow.module.ticket.service;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.opsflow.common.enums.ErrorCode;
 import com.opsflow.common.exception.BusinessException;
 import com.opsflow.module.ticket.mapper.TicketAttachmentMapper;
@@ -23,6 +24,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -80,7 +82,12 @@ public class TicketAttachmentService {
         attachment.setFileName(originalName);
         attachment.setFilePath(objectKey);
         attachment.setFileSize(file.getSize());
-        attachment.setFileType(file.getContentType());
+        // file_type 列宽度为 varchar(64)，超长 MIME 会 Data truncation；截断兜底
+        String fileType = file.getContentType();
+        if (fileType != null && fileType.length() > 64) {
+            fileType = fileType.substring(0, 64);
+        }
+        attachment.setFileType(fileType);
         attachment.setUploaderId(operatorId);
         attachment.setCreateBy(operatorName);
         attachmentMapper.insert(attachment);
@@ -92,6 +99,27 @@ public class TicketAttachmentService {
         vo.setFileSize(attachment.getFileSize());
         vo.setUploadTime(attachment.getCreateTime());
         return vo;
+    }
+
+    /**
+     * 查询工单附件列表
+     */
+    public List<AttachmentVO> listByTicketId(Long ticketId) {
+        return attachmentMapper.selectList(
+                Wrappers.<TicketAttachment>lambdaQuery()
+                        .eq(TicketAttachment::getTicketId, ticketId)
+                        .orderByDesc(TicketAttachment::getId))
+                .stream()
+                .map(a -> {
+                    AttachmentVO vo = new AttachmentVO();
+                    vo.setId(a.getId());
+                    vo.setFileName(a.getFileName());
+                    vo.setFilePath(a.getFilePath());
+                    vo.setFileSize(a.getFileSize());
+                    vo.setUploadTime(a.getCreateTime());
+                    return vo;
+                })
+                .toList();
     }
 
     /**

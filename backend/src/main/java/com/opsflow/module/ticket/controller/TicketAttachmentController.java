@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 /**
  * 工单附件接口
@@ -32,6 +33,12 @@ import java.nio.charset.StandardCharsets;
 public class TicketAttachmentController {
 
     private final TicketAttachmentService attachmentService;
+
+    @Operation(summary = "附件列表")
+    @GetMapping
+    public R<List<AttachmentVO>> list(@PathVariable Long ticketId) {
+        return R.ok(attachmentService.listByTicketId(ticketId));
+    }
 
     @Operation(summary = "上传附件（≤20MB）")
     @AuditLog(module = "TICKET", operation = "上传附件")

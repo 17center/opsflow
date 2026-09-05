@@ -61,6 +61,18 @@ public class RoleService {
     }
 
     /**
+     * 查询全部启用角色（供用户绑定角色下拉使用）
+     */
+    public List<RoleAdminVO> listEnabled() {
+        return roleMapper.selectList(
+                        Wrappers.<SysRole>lambdaQuery()
+                                .eq(SysRole::getStatus, 1)
+                                .orderByAsc(SysRole::getSortOrder)
+                                .orderByAsc(SysRole::getId))
+                .stream().map(this::toVO).toList();
+    }
+
+    /**
      * 角色详情（含已分配菜单 ID）
      */
     public RoleAdminVO detail(Long id) {
@@ -97,6 +109,9 @@ public class RoleService {
      */
     public void update(Long id, RoleUpdateDTO dto, String operator) {
         SysRole role = getById(id);
+        if (ADMIN_ROLE_CODE.equals(role.getRoleCode())) {
+            throw new BusinessException(ErrorCode.ROLE_ADMIN_PROTECTED);
+        }
         role.setRoleName(dto.getRoleName());
         role.setSortOrder(dto.getSortOrder() == null ? 0 : dto.getSortOrder());
         role.setDataScope(dto.getDataScope() == null ? 1 : dto.getDataScope());
@@ -143,7 +158,10 @@ public class RoleService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void assignMenus(Long id, List<Long> menuIds) {
-        getById(id);
+        SysRole role = getById(id);
+        if (ADMIN_ROLE_CODE.equals(role.getRoleCode())) {
+            throw new BusinessException(ErrorCode.ROLE_ADMIN_PROTECTED);
+        }
         roleMenuMapper.delete(Wrappers.<SysRoleMenu>lambdaQuery().eq(SysRoleMenu::getRoleId, id));
         if (menuIds != null && !menuIds.isEmpty()) {
             for (Long menuId : menuIds) {

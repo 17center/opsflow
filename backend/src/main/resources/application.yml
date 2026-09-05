@@ -66,6 +66,11 @@ opsflow:
     # HMAC 密钥 (生产环境务必通过环境变量注入)
     secret: ${OPSFLOW_JWT_SECRET:opsflow-dev-secret-key-change-me-in-production-0123456789}
     expiration: 86400
+  monitoring:
+    enabled: true
+    prometheus-url: ${PROMETHEUS_URL:http://localhost:9090}
+    scrape-interval-ms: 15000
+    node-exporter-port: 9100
   minio:
     endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
     access-key: ${MINIO_ACCESS_KEY:opsflow}

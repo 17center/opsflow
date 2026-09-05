@@ -2,42 +2,75 @@
   <div>
     <el-card shadow="never">
       <div class="toolbar">
-        <el-button :icon="Refresh" @click="load">刷新</el-button>
+        <el-button :icon="Refresh" @click="activeTab === 'todo' ? load() : loadDone()">刷新</el-button>
       </div>
 
-      <el-table :data="list" v-loading="loading" border stripe>
-        <el-table-column prop="taskName" label="审批节点" width="150" />
-        <el-table-column prop="ticketNo" label="工单编号" width="190" />
-        <el-table-column prop="ticketTitle" label="工单标题" min-width="200" show-overflow-tooltip />
-        <el-table-column label="签批方式" width="90">
-          <template #default="{ row }">
-            <el-tag size="small" type="info">{{ SIGN_TYPE_TEXT[row.signType || 1] }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="createTime" label="到达时间" width="165" />
-        <el-table-column label="截止时间" width="165">
-          <template #default="{ row }">{{ row.dueTime || '-' }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
-          <template #default="{ row }">
-            <el-button link type="success" @click="openApprove(row)">通过</el-button>
-            <el-button link type="danger" @click="openReject(row)">驳回</el-button>
-            <el-button link type="warning" @click="openDelegate(row)">转交</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <el-tabs v-model="activeTab">
+        <el-tab-pane label="待办" name="todo">
+          <el-table :data="list" v-loading="loading" border stripe>
+            <el-table-column prop="taskName" label="审批节点" width="150" />
+            <el-table-column prop="ticketNo" label="工单编号" width="190" />
+            <el-table-column prop="ticketTitle" label="工单标题" min-width="200" show-overflow-tooltip />
+            <el-table-column label="签批方式" width="90">
+              <template #default="{ row }">
+                <el-tag size="small" type="info">{{ SIGN_TYPE_TEXT[row.signType || 1] }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="createTime" label="到达时间" width="165" />
+            <el-table-column label="截止时间" width="165">
+              <template #default="{ row }">{{ row.dueTime || '-' }}</template>
+            </el-table-column>
+            <el-table-column label="操作" width="200" fixed="right">
+              <template #default="{ row }">
+                <el-button link type="success" @click="openApprove(row)">通过</el-button>
+                <el-button link type="danger" @click="openReject(row)">驳回</el-button>
+                <el-button link type="warning" @click="openDelegate(row)">转交</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
 
-      <el-pagination
-        class="pagination"
-        background
-        layout="total, sizes, prev, pager, next, jumper"
-        :total="total"
-        :current-page="query.current"
-        :page-size="query.size"
-        :page-sizes="[10, 20, 50, 100]"
-        @current-change="handlePageChange"
-        @size-change="handleSizeChange"
-      />
+          <el-pagination
+            class="pagination"
+            background
+            layout="total, sizes, prev, pager, next, jumper"
+            :total="total"
+            :current-page="query.current"
+            :page-size="query.size"
+            :page-sizes="[10, 20, 50, 100]"
+            @current-change="handlePageChange"
+            @size-change="handleSizeChange"
+          />
+        </el-tab-pane>
+
+        <el-tab-pane label="已办" name="done">
+          <el-table :data="doneList" v-loading="doneLoading" border stripe>
+            <el-table-column prop="taskName" label="审批节点" width="150" />
+            <el-table-column prop="ticketNo" label="工单编号" width="190" />
+            <el-table-column prop="ticketTitle" label="工单标题" min-width="200" show-overflow-tooltip />
+            <el-table-column label="审批结果" width="130">
+              <template #default="{ row }">
+                <el-tag :type="ACTION_TAG[row.action] || 'info'" size="small">{{ row.statusName || row.action || '-' }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="审批意见" min-width="160" show-overflow-tooltip>
+              <template #default="{ row }">{{ row.comment || '-' }}</template>
+            </el-table-column>
+            <el-table-column prop="completeTime" label="完成时间" width="165" />
+          </el-table>
+
+          <el-pagination
+            class="pagination"
+            background
+            layout="total, sizes, prev, pager, next, jumper"
+            :total="doneTotal"
+            :current-page="doneQuery.current"
+            :page-size="doneQuery.size"
+            :page-sizes="[10, 20, 50, 100]"
+            @current-change="handleDonePageChange"
+            @size-change="handleDoneSizeChange"
+          />
+        </el-tab-pane>
+      </el-tabs>
     </el-card>
 
     <!-- 审批意见弹窗 -->
@@ -62,11 +95,13 @@ import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
 import {
   pageTodo,
+  getWfDone,
   approveTask,
   rejectTask,
   delegateTask,
   SIGN_TYPE_TEXT,
-  type WfTodo
+  type WfTodo,
+  type WfDone
 } from '@/api/workflow'
 import { pageUsers } from '@/api/ticket'
 
@@ -76,6 +111,19 @@ const list = ref<WfTodo[]>([])
 const total = ref(0)
 
 const query = reactive<{ current: number; size: number }>({ current: 1, size: 10 })
+
+// 已办
+const activeTab = ref<'todo' | 'done'>('todo')
+const doneLoading = ref(false)
+const doneList = ref<WfDone[]>([])
+const doneTotal = ref(0)
+const doneQuery = reactive<{ current: number; size: number }>({ current: 1, size: 10 })
+
+const ACTION_TAG: Record<string, 'success' | 'danger' | 'warning' | 'info'> = {
+  APPROVE: 'success',
+  REJECT: 'danger',
+  DELEGATE: 'warning'
+}
 
 // 操作弹窗
 const actionVisible = ref(false)
@@ -97,6 +145,17 @@ async function load() {
   }
 }
 
+async function loadDone() {
+  doneLoading.value = true
+  try {
+    const res = await getWfDone({ current: doneQuery.current, size: doneQuery.size })
+    doneList.value = res.records
+    doneTotal.value = res.total
+  } finally {
+    doneLoading.value = false
+  }
+}
+
 function handlePageChange(page: number) {
   query.current = page
   load()
@@ -106,6 +165,17 @@ function handleSizeChange(size: number) {
   query.size = size
   query.current = 1
   load()
+}
+
+function handleDonePageChange(page: number) {
+  doneQuery.current = page
+  loadDone()
+}
+
+function handleDoneSizeChange(size: number) {
+  doneQuery.size = size
+  doneQuery.current = 1
+  loadDone()
 }
 
 function openApprove(row: WfTodo) {

@@ -14,13 +14,13 @@ export default defineConfig({
     port: 5173,
     host: true,
     proxy: {
-      // 开发环境代理到后端
+      // 开发环境代理到服务器后端（改完前端代码可在本地秒级热更新预览，接口走真实后端）
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://192.168.2.136:8080',
         changeOrigin: true
       },
       '/ws': {
-        target: 'ws://localhost:8080',
+        target: 'ws://192.168.2.136:8080',
         ws: true,
         changeOrigin: true
       }

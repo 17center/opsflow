@@ -15,6 +15,7 @@ import com.opsflow.module.automation.ssh.SshExecutor;
 import com.opsflow.module.auth.mapper.SysUserMapper;
 import com.opsflow.module.auth.model.entity.SysUser;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -62,7 +63,11 @@ public class CmdbHostService {
         applyDto(host, dto);
         host.setStatus(1);
         host.setCreateBy(operator);
-        hostMapper.insert(host);
+        try {
+            hostMapper.insert(host);
+        } catch (DuplicateKeyException e) {
+            throw new BusinessException(ErrorCode.HOST_EXISTS);
+        }
     }
 
     @Transactional

@@ -62,6 +62,7 @@
             </template>
             <el-menu-item index="/cmdb/hosts">主机管理</el-menu-item>
             <el-menu-item index="/cmdb/services">服务管理</el-menu-item>
+            <el-menu-item index="/cmdb/terminal">Web终端</el-menu-item>
             <el-menu-item index="/cmdb/relations">关联拓扑</el-menu-item>
           </el-sub-menu>
 
@@ -70,6 +71,7 @@
               <el-icon><Warning /></el-icon>
               <span>监控告警</span>
             </template>
+            <el-menu-item index="/alert/monitor">实时监控</el-menu-item>
             <el-menu-item index="/alert/rules">告警规则</el-menu-item>
             <el-menu-item index="/alert/events">告警事件</el-menu-item>
             <el-menu-item index="/alert/duty">值班管理</el-menu-item>

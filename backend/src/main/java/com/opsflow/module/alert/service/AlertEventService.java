@@ -110,6 +110,21 @@ public class AlertEventService {
         eventMapper.updateById(event);
     }
 
+    /** 按规则+主机恢复所有未关闭告警（指标采集器在值归于正常时调用） */
+    @Transactional
+    public void recoverByRule(Long ruleId, Long hostId) {
+        List<AlertEvent> open = eventMapper.selectList(
+                Wrappers.<AlertEvent>lambdaQuery()
+                        .eq(AlertEvent::getRuleId, ruleId)
+                        .eq(AlertEvent::getHostId, hostId)
+                        .in(AlertEvent::getStatus, STATUS_ACTIVE, STATUS_CONFIRMED, STATUS_SILENCED));
+        for (AlertEvent event : open) {
+            event.setStatus(STATUS_RECOVERED);
+            event.setRecoverTime(LocalDateTime.now());
+            eventMapper.updateById(event);
+        }
+    }
+
     /**
      * 触发告警（供指标采集/外部接入调用）
      * 告警收敛：相同规则相同主机 5 分钟内重复触发只生成一条（不重复生成）

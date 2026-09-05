@@ -44,6 +44,18 @@ public class WfTaskController {
         return R.ok(workflowService.todo(user.getUserId(), current, size));
     }
 
+    @Operation(summary = "我的已办任务")
+    @GetMapping("/done")
+    public R<PageResult<WfTaskTodoVO>> done(
+            @RequestParam(defaultValue = "1") long current,
+            @RequestParam(defaultValue = "10") long size) {
+        if (size > 100) {
+            size = 100;
+        }
+        LoginUser user = SecurityUtils.getLoginUser();
+        return R.ok(workflowService.done(user.getUserId(), current, size));
+    }
+
     @Operation(summary = "审批通过")
     @AuditLog(module = "WORKFLOW", operation = "审批通过")
     @PostMapping("/{taskId}/approve")

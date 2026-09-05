@@ -6,6 +6,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * 新增用户请求 DTO
  */
@@ -46,4 +48,7 @@ public class UserCreateDTO {
     @Schema(description = "备注")
     @Size(max = 500, message = "备注长度不能超过 500")
     private String remark;
+
+    @Schema(description = "绑定角色 ID 列表")
+    private List<Long> roleIds;
 }

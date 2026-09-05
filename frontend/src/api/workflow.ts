@@ -76,6 +76,22 @@ export interface WfTodo {
   createTime?: string
 }
 
+/** 我的已办 */
+export interface WfDone {
+  taskId: number
+  taskName: string
+  wfInstanceId?: number
+  ticketId: number
+  ticketNo: string
+  ticketTitle: string
+  assigneeName?: string
+  status?: number
+  statusName?: string
+  action?: string
+  comment?: string
+  completeTime?: string
+}
+
 /** 流程定义状态文本 */
 export const DEF_STATUS_TEXT: Record<number, string> = {
   0: '草稿',
@@ -201,6 +217,11 @@ export function getInstance(id: number) {
 /** 我的待办 */
 export function pageTodo(params: { current?: number; size?: number } = {}) {
   return get<PageResult<WfTodo>>('/workflow/tasks/todo', params)
+}
+
+/** 我的已办 */
+export function getWfDone(params: { current?: number; size?: number } = {}) {
+  return get<PageResult<WfDone>>('/workflow/tasks/done', params)
 }
 
 /** 审批通过 */

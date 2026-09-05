@@ -84,12 +84,24 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '服务管理', icon: 'Cpu' }
       },
       {
+        path: 'cmdb/terminal',
+        name: 'Terminal',
+        component: () => import('@/views/cmdb/terminal.vue'),
+        meta: { title: 'Web终端', icon: 'Monitor' }
+      },
+      {
         path: 'cmdb/relations',
         name: 'RelationList',
         component: () => import('@/views/cmdb/relations.vue'),
         meta: { title: '关联拓扑', icon: 'Share' }
       },
       // 监控告警
+      {
+        path: 'alert/monitor',
+        name: 'AlertMonitor',
+        component: () => import('@/views/alert/monitor.vue'),
+        meta: { title: '实时监控', icon: 'DataLine' }
+      },
       {
         path: 'alert/rules',
         name: 'AlertRules',

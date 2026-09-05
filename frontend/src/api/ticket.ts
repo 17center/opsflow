@@ -230,6 +230,11 @@ export function uploadAttachment(ticketId: number, file: File) {
   return post<AttachmentItem>(`/tickets/${ticketId}/attachments`, form as unknown as Record<string, unknown>)
 }
 
+/** 附件列表 */
+export function listAttachments(ticketId: number) {
+  return get<AttachmentItem[]>(`/tickets/${ticketId}/attachments`)
+}
+
 // ============ 站内通知 ============
 
 /** 分页查询通知 */

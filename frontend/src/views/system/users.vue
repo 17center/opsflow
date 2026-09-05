@@ -44,12 +44,17 @@
         <el-table-column prop="createTime" label="创建时间" min-width="170" />
         <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
-            <el-button link type="warning" @click="handleResetPwd(row)">重置密码</el-button>
-            <el-button link :type="row.status === 1 ? 'danger' : 'success'" @click="handleStatus(row)">
-              {{ row.status === 1 ? '禁用' : '启用' }}
-            </el-button>
-            <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
+            <template v-if="isSuperAdmin(row)">
+              <el-tag type="warning" effect="plain">超级管理员 · 锁定</el-tag>
+            </template>
+            <template v-else>
+              <el-button link type="primary" @click="openDialog(row)">编辑</el-button>
+              <el-button link type="warning" @click="handleResetPwd(row)">重置密码</el-button>
+              <el-button link :type="row.status === 1 ? 'danger' : 'success'" @click="handleStatus(row)">
+                {{ row.status === 1 ? '禁用' : '启用' }}
+              </el-button>
+              <el-button link type="danger" @click="handleDelete(row)">删除</el-button>
+            </template>
           </template>
         </el-table-column>
       </el-table>
@@ -91,6 +96,11 @@
             style="width: 100%"
           />
         </el-form-item>
+        <el-form-item label="角色" prop="roleIds">
+          <el-select v-model="form.roleIds" multiple clearable placeholder="选择角色（用于分配权限）" style="width: 100%">
+            <el-option v-for="r in roleOptions" :key="r.id" :label="r.roleName" :value="r.id" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="邮箱" prop="email">
           <el-input v-model="form.email" placeholder="邮箱" />
         </el-form-item>
@@ -121,15 +131,18 @@ import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'elem
 import { Plus } from '@element-plus/icons-vue'
 import {
   pageUsers,
+  getUserDetail,
   createUser,
   updateUser,
   deleteUser,
   changeUserStatus,
   resetUserPassword,
   getDeptTree,
+  getRoleOptions,
   type UserItem,
   type UserForm,
-  type DeptTreeNode
+  type DeptTreeNode,
+  type RoleItem
 } from '@/api/system'
 
 const loading = ref(false)
@@ -138,12 +151,13 @@ const list = ref<UserItem[]>([])
 const total = ref(0)
 const deptOptions = ref<DeptTreeNode[]>([])
 const deptMap = reactive<Record<number, string>>({})
+const roleOptions = ref<RoleItem[]>([])
 
 const query = reactive({ current: 1, size: 10, username: '', nickname: '', status: undefined })
 
 const dialogVisible = ref(false)
 const formRef = ref<FormInstance>()
-const form = reactive<UserForm & { id?: number }>({ id: undefined, username: '', password: '', nickname: '', email: '', phone: '', deptId: undefined, status: 1, remark: '' })
+const form = reactive<UserForm & { id?: number }>({ id: undefined, username: '', password: '', nickname: '', email: '', phone: '', deptId: undefined, status: 1, remark: '', roleIds: [] })
 
 const rules: FormRules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
@@ -164,6 +178,19 @@ async function loadDepts() {
     })
   }
   walk(tree)
+}
+
+async function loadRoles() {
+  try {
+    roleOptions.value = await getRoleOptions()
+  } catch {
+    roleOptions.value = []
+  }
+}
+
+/** 判断是否为内置超级管理员（锁定，不可编辑/禁用/删除） */
+function isSuperAdmin(row: UserItem) {
+  return row.username === 'admin'
 }
 
 async function load() {
@@ -206,21 +233,23 @@ function handleSizeChange(size: number) {
   load()
 }
 
-function openDialog(row?: UserItem) {
+async function openDialog(row?: UserItem) {
   if (row) {
+    const detail = await getUserDetail(row.id)
     Object.assign(form, {
-      id: row.id,
-      username: row.username,
+      id: detail.id,
+      username: detail.username,
       password: '',
-      nickname: row.nickname,
-      email: row.email || '',
-      phone: row.phone || '',
-      deptId: row.deptId,
-      status: row.status,
-      remark: row.remark || ''
+      nickname: detail.nickname,
+      email: detail.email || '',
+      phone: detail.phone || '',
+      deptId: detail.deptId,
+      status: detail.status,
+      remark: detail.remark || '',
+      roleIds: detail.roleIds || []
     })
   } else {
-    Object.assign(form, { id: undefined, username: '', password: '', nickname: '', email: '', phone: '', deptId: undefined, status: 1, remark: '' })
+    Object.assign(form, { id: undefined, username: '', password: '', nickname: '', email: '', phone: '', deptId: undefined, status: 1, remark: '', roleIds: [] })
   }
   dialogVisible.value = true
   formRef.value?.clearValidate()
@@ -238,7 +267,8 @@ async function handleSave() {
         phone: form.phone || undefined,
         deptId: form.deptId,
         status: form.status,
-        remark: form.remark || undefined
+        remark: form.remark || undefined,
+        roleIds: form.roleIds
       })
       ElMessage.success('修改成功')
     } else {
@@ -250,7 +280,8 @@ async function handleSave() {
         phone: form.phone || undefined,
         deptId: form.deptId,
         status: form.status,
-        remark: form.remark || undefined
+        remark: form.remark || undefined,
+        roleIds: form.roleIds
       })
       ElMessage.success('新增成功')
     }
@@ -291,6 +322,7 @@ async function handleDelete(row: UserItem) {
 
 onMounted(() => {
   loadDepts()
+  loadRoles()
   load()
 })
 </script>

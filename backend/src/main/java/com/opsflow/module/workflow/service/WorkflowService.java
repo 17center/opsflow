@@ -222,6 +222,21 @@ public class WorkflowService {
     }
 
     /**
+     * 我的已办任务
+     */
+    public PageResult<WfTaskTodoVO> done(Long userId, long current, long size) {
+        Page<WfTask> page = taskMapper.selectPage(new Page<>(current, size),
+                Wrappers.<WfTask>lambdaQuery()
+                        .ne(WfTask::getStatus, TASK_PENDING)
+                        .eq(WfTask::getAssigneeId, userId)
+                        .orderByDesc(WfTask::getCompleteTime));
+        List<WfTaskTodoVO> records = page.getRecords().stream()
+                .map(t -> toTodoVO(t, userId))
+                .toList();
+        return PageResult.of(records, page.getTotal(), page.getSize(), page.getCurrent());
+    }
+
+    /**
      * 流程实例列表（分页）
      */
     public PageResult<WfInstanceVO> pageInstances(long current, long size, Long ticketId, Integer status) {
@@ -410,6 +425,14 @@ public class WorkflowService {
             }
         }
         return map;
+    }
+
+    private String resolveAssigneeName(Long assigneeId) {
+        if (assigneeId == null) {
+            return null;
+        }
+        Map<Long, String> names = loadUserNames(List.of(assigneeId));
+        return names.getOrDefault(assigneeId, String.valueOf(assigneeId));
     }
 
     private void recordTicketLog(Long ticketId, String action, String content, Long operatorId) {

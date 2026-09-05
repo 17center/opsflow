@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 用户列表/详情 VO（不含密码等敏感字段）
@@ -53,4 +54,7 @@ public class UserVO {
 
     @Schema(description = "备注")
     private String remark;
+
+    @Schema(description = "已绑定角色 ID 列表（仅详情返回）")
+    private List<Long> roleIds;
 }

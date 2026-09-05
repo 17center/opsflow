@@ -54,6 +54,13 @@ public class SysRoleController {
         return R.ok(roleService.page(current, size, roleName, roleCode, status));
     }
 
+    @Operation(summary = "查询启用角色列表（用户绑定角色用）")
+    @PreAuthorize("hasAnyAuthority('sys:user:manage','sys:role:manage')")
+    @GetMapping("/list")
+    public R<List<RoleAdminVO>> list() {
+        return R.ok(roleService.listEnabled());
+    }
+
     @Operation(summary = "角色详情（含已分配菜单）")
     @PreAuthorize("hasAuthority('sys:role:manage')")
     @GetMapping("/{id}")

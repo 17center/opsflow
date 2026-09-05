@@ -36,6 +36,13 @@ public class SysUserController {
 
     private final UserService userService;
 
+    @Operation(summary = "用户详情")
+    @PreAuthorize("hasAuthority('sys:user:manage')")
+    @GetMapping("/{id}")
+    public R<UserVO> detail(@PathVariable Long id) {
+        return R.ok(userService.detail(id));
+    }
+
     @Operation(summary = "分页查询用户")
     @PreAuthorize("hasAuthority('sys:user:manage')")
     @GetMapping

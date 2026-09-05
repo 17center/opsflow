@@ -28,4 +28,22 @@ public class WfTaskTodoVO {
     private LocalDateTime dueTime;
 
     private LocalDateTime createTime;
+
+    /** 审批人姓名 */
+    private String assigneeName;
+
+    /** 任务状态：1=待处理 2=已通过 3=已驳回 4=已转交 5=已超时 */
+    private Integer status;
+
+    /** 状态名称 */
+    private String statusName;
+
+    /** 审批动作：APPROVE/REJECT/DELEGATE */
+    private String action;
+
+    /** 审批意见 */
+    private String comment;
+
+    /** 完成时间 */
+    private LocalDateTime completeTime;
 }

@@ -14,6 +14,7 @@ export interface UserItem {
   loginTime?: string
   createTime?: string
   remark?: string
+  roleIds?: number[]
 }
 
 export interface UserForm {
@@ -25,6 +26,7 @@ export interface UserForm {
   deptId?: number
   status: number
   remark?: string
+  roleIds?: number[]
 }
 
 export function pageUsers(params: {
@@ -36,6 +38,10 @@ export function pageUsers(params: {
   deptId?: number
 }) {
   return get<PageResult<UserItem>>('/system/users', params)
+}
+
+export function getUserDetail(id: number) {
+  return get<UserItem>(`/system/users/${id}`)
 }
 
 export function createUser(data: UserForm) {
@@ -56,6 +62,11 @@ export function changeUserStatus(id: number, status: number) {
 
 export function resetUserPassword(id: number, password: string) {
   return put<null>(`/system/users/${id}/password`, { password })
+}
+
+/** 启用角色列表（用户绑定角色下拉用） */
+export function getRoleOptions() {
+  return get<RoleItem[]>('/system/roles/list')
 }
 
 /** 角色 */
