@@ -41,8 +41,9 @@ log()  { printf '[deploy %s] %s\n' "$(date '+%H:%M:%S')" "$*"; }
 fail() { printf '[deploy %s] ERROR: %s\n' "$(date '+%H:%M:%S')" "$*" >&2; }
 
 # ---------- 0. 校验产物 ----------
-JAR_SRC=$(find "$JAR_SRC_DIR" -maxdepth 1 -name 'opsflow-backend-*.jar' -type f 2>/dev/null | head -1)
-[ -n "$JAR_SRC" ] || { fail "未在 $JAR_SRC_DIR 找到 opsflow-backend-*.jar"; exit 1; }
+# 兼容两种命名：CI 上传的 opsflow-backend.jar，以及 Maven 原生的 opsflow-backend-<ver>.jar
+JAR_SRC=$(find "$JAR_SRC_DIR" -maxdepth 1 -type f -name 'opsflow-backend*.jar' 2>/dev/null | head -1)
+[ -n "$JAR_SRC" ] || { fail "未在 $JAR_SRC_DIR 找到 opsflow-backend*.jar"; exit 1; }
 [ -f "$DIST_SRC_DIR/index.html" ] || { fail "未在 $DIST_SRC_DIR 找到 index.html"; exit 1; }
 
 log "待部署 jar : $(basename "$JAR_SRC") ($(du -h "$JAR_SRC" | cut -f1))"

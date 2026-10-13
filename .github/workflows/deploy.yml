@@ -8,7 +8,11 @@ name: Build & Deploy
 #      所以「部署」必须由 136 上的自托管 runner 执行。
 #   2. 但 136 只有 2GB 内存、可用约 300MB，跑 Maven + vue-tsc 构建风险高，
 #      所以「构建」放到 GitHub 托管 runner（本仓库为 public，免费且不限时长）。
-#   3. 136 出站可达 api.github.com / codeload / blob 存储，能正常拉取 artifact。
+#
+# 为什么用 Release 资源而不是 upload-artifact（重要）：
+#   实测 136 从 artifact 的 Azure Blob 存储下载仅约 47 KB/s，
+#   117MB 的 jar 需约 41 分钟；而经 gh-proxy 镜像拉取 Release 资源约 10 MB/s。
+#   因此构建产物通过 Release 分发，并由 scripts/fetch-release.sh 强制校验 sha256。
 #
 # ⚠️ 安全（重要）：
 #   本仓库是 public，且部署 job 跑在自托管 runner 上。
@@ -23,19 +27,20 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# 同一时间只允许一次部署，避免并发重启服务
 concurrency:
   group: opsflow-deploy
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  # ---------- 阶段一：在 GitHub 托管 runner 上构建 ----------
+  # ---------- 阶段一：云端构建 ----------
   build:
     name: Build (cloud)
     runs-on: ubuntu-latest
+    outputs:
+      run_number: ${{ github.run_number }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -67,21 +72,26 @@ jobs:
           npm run build
           ls -lh dist | head -5
 
-      - name: Upload backend jar
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-jar
-          path: backend/target/opsflow-backend-*.jar
-          if-no-files-found: error
-          retention-days: 7
+      - name: 打包产物（前端打成 tar.gz，避免目录结构丢失）
+        run: |
+          mkdir -p /tmp/rel
+          cp backend/target/opsflow-backend-*.jar /tmp/rel/opsflow-backend.jar
+          tar -czf /tmp/rel/frontend-dist.tar.gz -C frontend/dist .
+          ls -lh /tmp/rel
 
-      - name: Upload frontend dist
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-dist
-          path: frontend/dist/
-          if-no-files-found: error
-          retention-days: 7
+      - name: 发布到 Release（供 136 高速拉取）
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="ci-${{ github.run_number }}"
+          # 清理同名旧 release（重跑时）
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "$TAG" \
+            /tmp/rel/opsflow-backend.jar \
+            /tmp/rel/frontend-dist.tar.gz \
+            --title "CI build #${{ github.run_number }}" \
+            --notes "自动构建产物：${{ github.sha }}" \
+            --prerelease
 
   # ---------- 阶段二：在 136 自托管 runner 上部署 ----------
   deploy:
@@ -89,39 +99,38 @@ jobs:
     needs: build
     runs-on: [self-hosted, opsflow]
     steps:
-      - name: Checkout (用于比对部署脚本版本)
+      - name: Checkout（用于比对部署脚本版本）
         uses: actions/checkout@v4
 
       - name: 漂移检查：仓库脚本 vs 服务器已安装脚本
         run: |
-          REPO_SCRIPT=scripts/deploy.sh
           INSTALLED=/opt/opsflow/bin/deploy.sh
-          if ! diff -q "$REPO_SCRIPT" "$INSTALLED" >/dev/null 2>&1; then
+          if ! diff -q scripts/deploy.sh "$INSTALLED" >/dev/null 2>&1; then
             echo "::error::$INSTALLED 与仓库 scripts/deploy.sh 不一致。"
-            echo "部署脚本以 root 安装、sudoers 仅放行该固定路径，"
-            echo "因此仓库改动不会自动生效。请先在 136 上执行："
+            echo "部署脚本以 root 安装、sudoers 仅放行该固定路径，仓库改动不会自动生效。"
+            echo "请先在 136 上执行："
             echo "  sudo install -m 755 -o root -g root scripts/deploy.sh $INSTALLED"
-            diff -u "$INSTALLED" "$REPO_SCRIPT" || true
+            diff -u "$INSTALLED" scripts/deploy.sh || true
             exit 1
           fi
           echo "部署脚本一致 ✅"
 
-      - name: 准备产物暂存目录
+      - name: 拉取构建产物（镜像加速 + sha256 强制校验）
+        env:
+          RUN_NUMBER: ${{ needs.build.outputs.run_number }}
+          # 刻意不传 GH_TOKEN：仓库为 public，读取 release 无需鉴权。
+          # 自托管 runner 上少一个令牌，就少一份泄露面。
         run: |
-          rm -rf /tmp/opsflow-release
-          mkdir -p /tmp/opsflow-release/jar /tmp/opsflow-release/dist
+          chmod +x scripts/fetch-release.sh
+          scripts/fetch-release.sh
 
-      - name: Download backend jar
-        uses: actions/download-artifact@v4
-        with:
-          name: backend-jar
-          path: /tmp/opsflow-release/jar
-
-      - name: Download frontend dist
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-dist
-          path: /tmp/opsflow-release/dist
+      - name: 解包前端产物
+        run: |
+          mkdir -p /tmp/opsflow-release/dist
+          tar -xzf /tmp/opsflow-release/frontend-dist.tar.gz -C /tmp/opsflow-release/dist
+          rm -f /tmp/opsflow-release/frontend-dist.tar.gz
+          ls /tmp/opsflow-release
+          ls /tmp/opsflow-release/dist | head -5
 
       - name: 部署（含健康检查与失败自动回滚）
         run: |
@@ -132,3 +141,20 @@ jobs:
       - name: 清理暂存目录
         if: always()
         run: rm -rf /tmp/opsflow-release
+
+  # ---------- 阶段三：清理 Release 产物 ----------
+  # 单独成一个 job 在云端执行：136 上未安装 gh CLI，
+  # 且不应为此在自托管 runner 上放置写权限令牌。
+  cleanup:
+    name: Cleanup release
+    needs: [build, deploy]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: 删除本次 CI Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ci-${{ needs.build.outputs.run_number }}
+        run: |
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null \
+            && echo "已删除 $TAG" || echo "$TAG 不存在或已删除"
