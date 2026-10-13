@@ -28,6 +28,7 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: 6379
+      password: ${REDIS_PASSWORD:}
       database: 0
       timeout: 5000ms
 
@@ -37,7 +38,9 @@ mybatis-plus:
   type-aliases-package: com.opsflow.module.**.model.entity
   configuration:
     map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    # 生产环境使用 SLF4J 输出 SQL（走 logback，受日志级别控制）
+    # 切勿使用 StdOutImpl：会把每条 SQL 及参数明文写入 stdout
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
   global-config:
     db-config:
       logic-delete-field: deleted

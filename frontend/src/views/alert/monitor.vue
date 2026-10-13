@@ -6,7 +6,7 @@
         实时监控大屏
       </span>
       <div class="toolbar-right">
-        <span class="src-hint">数据源：Prometheus · 本机 192.168.2.136</span>
+        <span class="src-hint">数据源：Prometheus · {{ serverHost }}</span>
         <el-button size="small" :icon="Refresh" @click="reload">刷新</el-button>
         <el-button size="small" text :icon="FullScreen" @click="fullscreen">全屏</el-button>
       </div>
@@ -28,13 +28,18 @@
 import { ref } from 'vue'
 import { Refresh, FullScreen, DataLine } from '@element-plus/icons-vue'
 
-const GRAFANA_DASH = '/grafana/d/opsflow-node-overview?orgId=1&kiosk=tv&refresh=15s&from=now-6h&to=now'
+const serverHost = window.location.host
 
-const grafanaUrl = ref(GRAFANA_DASH)
+function buildGrafanaUrl() {
+  return '/grafana/d/opsflow-node-overview?orgId=1&kiosk=tv&refresh=15s&from=now-6h&to=now&_t=' + Date.now()
+}
+
+const grafanaUrl = ref(buildGrafanaUrl())
 const frameKey = ref(0)
 const frameWrap = ref<HTMLElement>()
 
 function reload() {
+  grafanaUrl.value = buildGrafanaUrl()
   frameKey.value++ // 递增 key 强制 iframe 重载
 }
 
