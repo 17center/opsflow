@@ -99,10 +99,32 @@ jobs:
     needs: build
     runs-on: [self-hosted, opsflow]
     steps:
-      - name: Checkout（用于比对部署脚本版本）
-        uses: actions/checkout@v4
+      # 注意：此处刻意不用 actions/checkout。
+      # 实测 136 上 `git clone https://github.com/...` 被拒（443 拒绝连接），
+      # 而 actions/checkout 依赖 git clone，必然失败。
+      # codeload.github.com 可达，故直接用 tarball 取源码。
+      # 这里内联下载而非调用仓库脚本：避免「脚本自己要先从网络取回自己」的引导依赖。
+      - name: 获取源码（tarball，替代 actions/checkout）
+        run: |
+          set -euo pipefail
+          URL="https://codeload.github.com/17center/opsflow/tar.gz/${{ github.sha }}"
+          rm -rf /tmp/opsflow-src /tmp/opsflow-src.tgz
+          ok=0
+          for M in "https://gh-proxy.com/" "https://ghproxy.net/" ""; do
+            if curl -fsSL --retry 3 --retry-delay 2 --max-time 300 -o /tmp/opsflow-src.tgz "${M}${URL}" 2>/dev/null \
+               && gzip -t /tmp/opsflow-src.tgz 2>/dev/null; then
+              echo "源码已下载（源: ${M:-direct}）"
+              ok=1; break
+            fi
+            echo "源 ${M:-direct} 失败，尝试下一个"
+          done
+          [ "$ok" = "1" ] || { echo "::error::源码下载失败"; exit 1; }
+          mkdir -p /tmp/opsflow-src
+          tar -xzf /tmp/opsflow-src.tgz -C /tmp/opsflow-src --strip-components=1
+          ls /tmp/opsflow-src/scripts/
 
       - name: 漂移检查：仓库脚本 vs 服务器已安装脚本
+        working-directory: /tmp/opsflow-src
         run: |
           INSTALLED=/opt/opsflow/bin/deploy.sh
           if ! diff -q scripts/deploy.sh "$INSTALLED" >/dev/null 2>&1; then
@@ -116,6 +138,7 @@ jobs:
           echo "部署脚本一致 ✅"
 
       - name: 拉取构建产物（镜像加速 + sha256 强制校验）
+        working-directory: /tmp/opsflow-src
         env:
           RUN_NUMBER: ${{ needs.build.outputs.run_number }}
           # 刻意不传 GH_TOKEN：仓库为 public，读取 release 无需鉴权。
@@ -140,7 +163,7 @@ jobs:
 
       - name: 清理暂存目录
         if: always()
-        run: rm -rf /tmp/opsflow-release
+        run: rm -rf /tmp/opsflow-release /tmp/opsflow-src /tmp/opsflow-src.tgz
 
   # ---------- 阶段三：清理 Release 产物 ----------
   # 单独成一个 job 在云端执行：136 上未安装 gh CLI，
