@@ -1,0 +1,134 @@
+name: Build & Deploy
+
+# ============================================================
+# OpsFlow CI/CD —— 云端构建 + 内网部署（混合架构）
+#
+# 为什么拆成两个 job：
+#   1. 192.168.2.136 是 RFC1918 私有地址，GitHub 云端 runner 无法连入，
+#      所以「部署」必须由 136 上的自托管 runner 执行。
+#   2. 但 136 只有 2GB 内存、可用约 300MB，跑 Maven + vue-tsc 构建风险高，
+#      所以「构建」放到 GitHub 托管 runner（本仓库为 public，免费且不限时长）。
+#   3. 136 出站可达 api.github.com / codeload / blob 存储，能正常拉取 artifact。
+#
+# ⚠️ 安全（重要）：
+#   本仓库是 public，且部署 job 跑在自托管 runner 上。
+#   绝不能添加 pull_request / pull_request_target 触发 —— 否则任何人的 fork PR
+#   都能在 136 上执行任意代码。只允许 push(main) 与手动触发。
+#   部署脚本刻意使用 root 拥有的固定路径 /opt/opsflow/bin/deploy.sh，
+#   sudoers 只放行这一条命令，因此改动 scripts/deploy.sh 后需重新安装到该路径。
+# ============================================================
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# 同一时间只允许一次部署，避免并发重启服务
+concurrency:
+  group: opsflow-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------- 阶段一：在 GitHub 托管 runner 上构建 ----------
+  build:
+    name: Build (cloud)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build backend (Maven)
+        run: |
+          cd backend
+          mvn -B clean package -DskipTests -q
+          ls -lh target/*.jar
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build frontend (Vite)
+        run: |
+          cd frontend
+          npm ci --no-audit --no-fund --loglevel=error
+          npm run build
+          ls -lh dist | head -5
+
+      - name: Upload backend jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-jar
+          path: backend/target/opsflow-backend-*.jar
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload frontend dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  # ---------- 阶段二：在 136 自托管 runner 上部署 ----------
+  deploy:
+    name: Deploy (192.168.2.136)
+    needs: build
+    runs-on: [self-hosted, opsflow]
+    steps:
+      - name: Checkout (用于比对部署脚本版本)
+        uses: actions/checkout@v4
+
+      - name: 漂移检查：仓库脚本 vs 服务器已安装脚本
+        run: |
+          REPO_SCRIPT=scripts/deploy.sh
+          INSTALLED=/opt/opsflow/bin/deploy.sh
+          if ! diff -q "$REPO_SCRIPT" "$INSTALLED" >/dev/null 2>&1; then
+            echo "::error::$INSTALLED 与仓库 scripts/deploy.sh 不一致。"
+            echo "部署脚本以 root 安装、sudoers 仅放行该固定路径，"
+            echo "因此仓库改动不会自动生效。请先在 136 上执行："
+            echo "  sudo install -m 755 -o root -g root scripts/deploy.sh $INSTALLED"
+            diff -u "$INSTALLED" "$REPO_SCRIPT" || true
+            exit 1
+          fi
+          echo "部署脚本一致 ✅"
+
+      - name: 准备产物暂存目录
+        run: |
+          rm -rf /tmp/opsflow-release
+          mkdir -p /tmp/opsflow-release/jar /tmp/opsflow-release/dist
+
+      - name: Download backend jar
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-jar
+          path: /tmp/opsflow-release/jar
+
+      - name: Download frontend dist
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: /tmp/opsflow-release/dist
+
+      - name: 部署（含健康检查与失败自动回滚）
+        run: |
+          # deploy.sh 内部：备份 -> 原子替换 -> 重启 -> 健康检查 -> 失败自动回滚
+          # 路径固定且以 root 安装，sudoers 仅放行这一条命令
+          sudo -n /opt/opsflow/bin/deploy.sh
+
+      - name: 清理暂存目录
+        if: always()
+        run: rm -rf /tmp/opsflow-release
